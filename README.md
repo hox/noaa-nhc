@@ -26,7 +26,7 @@ go build
 
 # In use
 
-![](https://cdn.eli.tf/f/Z5QmskKc.png)
+![](https://cdn.eli.tf/Z5QmskKc.png)
 
 # Side-note
 
