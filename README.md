@@ -4,7 +4,7 @@ When the National Hurricane Center posts a new [hurricane / tropical weather out
 
 # Docker
 
-You can run this project with docker by using the image `ghcr.io/hox/noaa-nhc`.
+You can run this project with docker by using the image `ghcr.io/hox/noaa-nhc`
 
 # Build/Run
 
@@ -12,9 +12,11 @@ To build/run this project use the following commands.
 
 ```
 go run .
+```
 
-or..
+or
 
+```
 go build
 ./noaa-nhc
 ```
@@ -26,7 +28,7 @@ go build
 
 # In use
 
-![](https://cdn.eli.tf/Z5QmskKc.png)
+![](https://cdn.eli.tf/mRmnVjKZdDa7.png)
 
 # Side-note
 
