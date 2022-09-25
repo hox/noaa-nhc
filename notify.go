@@ -3,10 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
+	"io"
+	"log"
 	"time"
 )
 
@@ -29,12 +27,12 @@ type Footer struct {
 	Text string `json:"text"`
 }
 
-func sendWebhook(WebhookURL string, Basin NHCBasinItem, datetime time.Time, PreviewURL string) {
+func sendWebhook(WebhookURL string, Item NHCItem, datetime time.Time, PreviewURL string, walletId string) {
 	data := &WebhookBody{
 		Embeds: []EmbedBody{
 			{
-				Title: "NHC Atlantic Outlook",
-				URL:   Basin.Link,
+				Title: Item.Title,
+				URL:   Item.Link,
 				Image: Image{
 					URL: PreviewURL,
 				},
@@ -47,24 +45,24 @@ func sendWebhook(WebhookURL string, Basin NHCBasinItem, datetime time.Time, Prev
 
 	dataStr, _ := json.Marshal(data)
 
-	resp, err := http.Post(WebhookURL, "application/json", bytes.NewBuffer(dataStr))
+	resp, err := client.Post(WebhookURL, "application/json", bytes.NewBuffer(dataStr))
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		log.Println(err.Error())
 		return
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		log.Println(err.Error())
 		return
 	}
 
 	if resp.StatusCode != 204 {
-		fmt.Fprintln(os.Stderr, "Error while sending Webhook message,", resp.Status, string(body))
+		log.Println("Error while sending Webhook message,", resp.Status, string(body))
 		return
 	}
 
-	fmt.Println("Webhook message has been sent!")
+	log.Println("Webhook message has been sent!", walletId)
 }

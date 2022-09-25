@@ -4,7 +4,7 @@ When the National Hurricane Center posts a new [hurricane / tropical weather out
 
 # Docker
 
-You can run this project with docker by using `ghcr.io/hox/noaa-nhc:latest`.
+You can run this project with docker by using the image `ghcr.io/hox/noaa-nhc`.
 
 # Build/Run
 

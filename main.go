@@ -1,111 +1,132 @@
 package main
 
 import (
-	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 )
 
+var client http.Client
+
 func main() {
-	fmt.Println("NOAA NHC Atlantic Basin Tracker")
+	client = http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	log.Println("NOAA NHC Atlantic Basin Tracker")
 
 	if !checkEnv() {
-		fmt.Fprintln(os.Stderr, "Missing environment variables.")
+		log.Println("Missing environment variables.")
 		return
 	}
 
-	lastPublish, err := getLastPublishDate()
+	fetchTropicalOutlook()
+
+	if os.Getenv("WALLET_ID") != "" {
+		log.Println()
+		fetchWallet(os.Getenv("WALLET_ID"))
+	}
+}
+
+func fetchWallet(walletId string) {
+	log.Printf("Fetching Atlantic Basin Tropical Wallet #%s\n", walletId)
+
+	data, err := fetchNHC(fmt.Sprintf("https://www.nhc.noaa.gov/nhc_at%s.xml", walletId))
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		log.Println(err.Error())
 		return
 	}
 
-	resp, err := http.Get("https://www.nhc.noaa.gov/gtwo.xml")
+	advisories := data.Channel.Item
+
+	var summary NHCItem
+
+	for i := range advisories {
+		if strings.HasPrefix(advisories[i].Title, "Summary") {
+			summary = advisories[i]
+			break
+		}
+	}
+
+	validateAndSendPublication(summary, &walletId)
+}
+
+func fetchTropicalOutlook() {
+	data, err := fetchNHC("https://www.nhc.noaa.gov/gtwo.xml")
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		log.Println(err.Error())
 		return
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	basins := data.Channel.Item
 
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		return
-	}
+	var basin NHCItem
 
-	var data NHCData
-
-	xml.Unmarshal(body, &data)
-
-	items := data.Channel.Item
-
-	var basin NHCBasinItem
-
-	for i := 0; i < len(items); i++ {
-		if items[i].Title == "NHC Atlantic Outlook" {
-			basin = items[i]
+	for i := range basins {
+		if basins[i].Title == "NHC Atlantic Outlook" {
+			basin = basins[i]
 			break
 		}
 	}
 
 	if basin.Title == "" {
-		fmt.Println("Error finding Atlantic Basin Tropical Outlook.")
+		log.Println("Error finding Atlantic Basin Tropical Outlook.")
+		return
+	}
+
+	validateAndSendPublication(basin, nil)
+}
+
+func validateAndSendPublication(item NHCItem, walletId *string) {
+	lastPublish, err := getLastPublishDate(walletId)
+
+	if err != nil {
+		log.Println(err.Error())
 		return
 	}
 
 	layout := "Mon, 02 Jan 2006 15:04:05 MST"
-	datetime, err := time.Parse(layout, basin.PubDate)
+	datetime, err := time.Parse(layout, item.PubDate)
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		log.Println(err.Error())
 		return
 	}
 
-	fmt.Println("Atlantic Basin Tropical Outlook was last published on", datetime.Local().Format("Jan 02 2006, 3:04pm MST"))
+	var previewURL string
 
-	previewURL := "https://www.nhc.noaa.gov/archive/xgtwo/atl/" + formatDate(datetime) + "/two_atl_5d0.png"
+	id := ""
+
+	if walletId == nil {
+		log.Println("Atlantic Basin Tropical Outlook was last published on", datetime.Local().Format("Jan 02 2006, 3:04pm MST"))
+		previewURL = fmt.Sprintf("https://www.nhc.noaa.gov/archive/xgtwo/atl/%s/two_atl_5d0.png", formatDate(datetime, false))
+	} else {
+		id = "#" + *walletId
+		log.Printf("Atlantic Basin Tropical Wallet #%s was last published on %s\n", *walletId, datetime.Local().Format("Jan 02 2006, 3:04pm MST"))
+		alId := strings.ToUpper(strings.Split(item.Guid, "-")[1])
+		shortId := strings.Join(strings.Split(alId, "")[2:4], "")
+		datestr := formatDate(datetime, true)
+		previewURL = fmt.Sprintf("https://www.nhc.noaa.gov/storm_graphics/AT%s/refresh/%s_5day_cone_no_line_and_wind+png/%s.png", shortId, alId, datestr)
+	}
 
 	if lastPublish != datetime.Unix()*1000 {
 		if !verifyPreviewAvailable(previewURL) {
-			fmt.Println("New outlook information available but preview is not present.")
+			log.Println("New outlook information available but preview is not present.", id)
 			return
 		}
 
-		err := setLastPublishDate(datetime.Unix() * 1000)
-
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+		if err := setLastPublishDate(datetime.Unix()*1000, walletId); err != nil {
+			log.Println(err.Error())
 			return
 		}
 
-		sendWebhook(os.Getenv("WEBHOOK_URL"), basin, datetime, previewURL)
+		sendWebhook(os.Getenv("WEBHOOK_URL"), item, datetime, previewURL, id)
 	} else {
-		fmt.Println("No new outlook information present, check again next time!")
+		log.Println("No new outlook information present, check again next time!", id)
 	}
-}
-
-func checkEnv() bool {
-	return os.Getenv("WEBHOOK_URL") != "" &&
-		os.Getenv("REDIS_DSN") != ""
-}
-
-func formatDate(datetime time.Time) string {
-	return strings.Join(strings.Split(datetime.Format("2006 01 02 15 04"), " "), "")
-}
-
-func verifyPreviewAvailable(PreviewURL string) bool {
-	resp, err := http.Get(PreviewURL)
-
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		return false
-	}
-
-	return resp.StatusCode == 200
 }

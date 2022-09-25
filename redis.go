@@ -1,12 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/gomodule/redigo/redis"
 )
 
-func setLastPublishDate(timestamp int64) error {
+func setLastPublishDate(timestamp int64, walletId *string) error {
 	c, err := dial()
 
 	if err != nil {
@@ -15,7 +16,13 @@ func setLastPublishDate(timestamp int64) error {
 
 	defer c.Close()
 
-	_, err = c.Do("SET", "noaa-nhc:last-updated", timestamp)
+	suffix := ""
+
+	if walletId != nil {
+		suffix += ":" + *walletId
+	}
+
+	_, err = c.Do("SET", fmt.Sprintf("noaa-nhc:last-updated%s", suffix), timestamp)
 
 	if err != nil {
 		return err
@@ -24,7 +31,7 @@ func setLastPublishDate(timestamp int64) error {
 	}
 }
 
-func getLastPublishDate() (int64, error) {
+func getLastPublishDate(walletId *string) (int64, error) {
 	c, err := dial()
 
 	if err != nil {
@@ -33,7 +40,13 @@ func getLastPublishDate() (int64, error) {
 
 	defer c.Close()
 
-	str, err := redis.Int64(c.Do("GET", "noaa-nhc:last-updated"))
+	suffix := ""
+
+	if walletId != nil {
+		suffix += ":" + *walletId
+	}
+
+	str, err := redis.Int64(c.Do("GET", fmt.Sprintf("noaa-nhc:last-updated%s", suffix)))
 
 	if err != nil {
 		return 0, nil
