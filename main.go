@@ -102,9 +102,7 @@ func validateAndSendPublication(item NHCItem, walletId *string, advisory *string
 		return
 	}
 
-	var previewURL string
-
-	id := ""
+	id, previewURL := "", ""
 
 	if walletId == nil {
 		log.Println("Atlantic Basin Tropical Outlook was last published on", datetime.Local().Format("Jan 02 2006, 3:04pm MST"))
