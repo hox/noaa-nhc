@@ -45,11 +45,12 @@ type NHCLink struct {
 }
 
 type NHCItem struct {
-	Text        string `xml:",chardata"`
-	Title       string `xml:"title"`
-	Description string `xml:"description"`
-	PubDate     string `xml:"pubDate"`
-	Link        string `xml:"link"`
-	Guid        string `xml:"guid"`
-	Author      string `xml:"author"`
+	Text          string  `xml:",chardata"`
+	Title         string  `xml:"title"`
+	Description   string  `xml:"description"`
+	PubDate       string  `xml:"pubDate"`
+	Link          string  `xml:"link"`
+	Guid          string  `xml:"guid"`
+	Author        string  `xml:"author"`
+	ValidAdvisory *string `xml:"validAdvisory"`
 }
