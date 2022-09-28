@@ -44,7 +44,7 @@ func fetchWallet(walletId string) {
 	advisories := data.Channel.Item
 
 	var summary NHCItem
-	var advisory string
+	var advisory NHCItem
 
 	for i := range advisories {
 		if strings.HasPrefix(advisories[i].Title, "Summary") {
@@ -52,7 +52,7 @@ func fetchWallet(walletId string) {
 		}
 
 		if advisories[i].ValidAdvisory != nil {
-			advisory = *advisories[i].ValidAdvisory
+			advisory = advisories[i]
 		}
 	}
 
@@ -86,7 +86,7 @@ func fetchTropicalOutlook() {
 	validateAndSendPublication(basin, nil, nil)
 }
 
-func validateAndSendPublication(item NHCItem, walletId *string, advisory *string) {
+func validateAndSendPublication(item NHCItem, walletId *string, advisory *NHCItem) {
 	lastPublish, err := getLastPublishDate(walletId)
 
 	if err != nil {
@@ -95,7 +95,14 @@ func validateAndSendPublication(item NHCItem, walletId *string, advisory *string
 	}
 
 	layout := "Mon, 02 Jan 2006 15:04:05 MST"
-	datetime, err := time.Parse(layout, item.PubDate)
+	var datetime time.Time
+
+	switch advisory {
+	case nil:
+		datetime, err = time.Parse(layout, item.PubDate)
+	default:
+		datetime, err = time.Parse(layout, advisory.PubDate)
+	}
 
 	if err != nil {
 		log.Println(err.Error())
@@ -111,7 +118,7 @@ func validateAndSendPublication(item NHCItem, walletId *string, advisory *string
 		id = "#" + *walletId
 		log.Printf("Atlantic Basin Tropical Wallet #%s was last published on %s\n", *walletId, datetime.Local().Format("Jan 02 2006, 3:04pm MST"))
 		alId := strings.ToUpper(strings.Split(item.Guid, "-")[1])
-		previewURL = fmt.Sprintf("https://www.nhc.noaa.gov/archive/%d/graphics/%s/%s_5day_cone_no_line_and_wind_%s.png", datetime.Year(), alId, alId, *advisory)
+		previewURL = fmt.Sprintf("https://www.nhc.noaa.gov/archive/%d/graphics/%s/%s_5day_cone_no_line_and_wind_%s.png", datetime.Year(), alId, alId, *advisory.ValidAdvisory)
 	}
 
 	if lastPublish != datetime.Unix()*1000 {
