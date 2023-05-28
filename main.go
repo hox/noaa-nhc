@@ -113,7 +113,7 @@ func validateAndSendPublication(item NHCItem, walletId *string, advisory *NHCIte
 
 	if walletId == nil {
 		log.Println("Atlantic Basin Tropical Outlook was last published on", datetime.Local().Format("Jan 02 2006, 3:04pm MST"))
-		previewURL = fmt.Sprintf("https://www.nhc.noaa.gov/archive/xgtwo/atl/%s/two_atl_5d0.png", formatDate(datetime, false))
+		previewURL = fmt.Sprintf("https://www.nhc.noaa.gov/archive/xgtwo/atl/%s/two_atl_7d0.png", formatDate(datetime, false))
 	} else {
 		id = "#" + *walletId
 		log.Printf("Atlantic Basin Tropical Wallet #%s was last published on %s\n", *walletId, datetime.Local().Format("Jan 02 2006, 3:04pm MST"))
